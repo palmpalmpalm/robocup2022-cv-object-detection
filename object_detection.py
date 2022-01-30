@@ -209,23 +209,18 @@ def main():
 
     # load our input image and grab its spatial dimensions
     img = cv2.imread("./test1.jpg")
-    cv2.imshow('test1', img)
 
-    # preprocess image
-    npimg = np.array(img)
-    image = npimg.copy()
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
+    # choose one method
     with torch.no_grad():
         # get detected image
-        res = OD.detect(image)
+        res = OD.detect(img)
 
         # get bboxs of object in images
-        bboxs = OD.get_bbox(image)
+        bboxs = OD.get_bbox(img)
 
     # show output
     image = cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
-    cv2.imshow('yolor_test1', image)
+    cv2.imshow('yolor', image)
     cv2.waitKey(0)
 
 
