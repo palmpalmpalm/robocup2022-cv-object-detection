@@ -1,5 +1,7 @@
 # pip install -qr requirements.txt
 
+**/.DS_Store
+
 # base ----------------------------------------
 Cython
 matplotlib>=3.2.2
