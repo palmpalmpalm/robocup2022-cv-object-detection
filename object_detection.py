@@ -51,6 +51,9 @@ class ObjectDetection:
 
     def detect(self, input_image):
 
+        # preprocess image
+        input_image = self.preprocess(input_image)
+
         # Run inference
         t0 = time.time()
         img = torch.zeros((1, 3, IMAGE_SIZE, IMAGE_SIZE), device=self.device)  # init img
@@ -115,6 +118,9 @@ class ObjectDetection:
         return input_image
 
     def get_bbox(self, input_image):
+
+        #preprocess image
+        input_image = self.preprocess(input_image)
 
         # object bbox list
         bbox_list = []
@@ -190,29 +196,32 @@ class ObjectDetection:
             format_bboxs.append([bbox[4], tuple([bbox[0], bbox[1], bbox[2] - bbox[0], bbox[3] - bbox[1]]), False])
         return format_bboxs
 
+    def preprocess(self, img):
+        npimg = np.array(img)
+        image = npimg.copy()
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        return image
+
+
 def main():
     # create model
     OD = ObjectDetection()
 
     # load our input image and grab its spatial dimensions
     img = cv2.imread("./test1.jpg")
-    cv2.imshow('test1', img)
 
-    # preprocess image
-    npimg = np.array(img)
-    image = npimg.copy()
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
+    # choose one method
     with torch.no_grad():
         # get detected image
-        res = OD.detect(image)
+        res = OD.detect(img)
 
         # get bboxs of object in images
-        bboxs = OD.get_bbox(image)
+        bboxs = OD.get_bbox(img)
+        print(bboxs)
 
     # show output
     image = cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
-    cv2.imshow('yolor_test1', image)
+    cv2.imshow('yolor', image)
     cv2.waitKey(0)
 
 
