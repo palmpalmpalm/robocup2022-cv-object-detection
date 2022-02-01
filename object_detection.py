@@ -1,4 +1,3 @@
-
 import time
 import cv2
 import torch
@@ -12,13 +11,15 @@ from utils.plots import plot_one_box
 from utils.torch_utils import select_device, time_synchronized
 
 from models.models import *
-
+from custom_socket import CustomSocket
+import socket
+import json
 
 # path
 CONFIG_PATH = 'config/'
 WEIGHTS_PATH = CONFIG_PATH + 'yolor_p6.pt'
 NAMES_PATH = CONFIG_PATH + 'coco.names'
-DEVICE = "cpu"
+DEVICE = "gpu"
 CFG_PATH = CONFIG_PATH + 'yolor_p6.cfg'
 IMAGE_SIZE = 1280
 
@@ -33,7 +34,7 @@ class ObjectDetection:
         # .cuda() #if you want cuda remove the comment
         self.model = Darknet(CFG_PATH, IMAGE_SIZE)
         self.model.load_state_dict(torch.load(WEIGHTS_PATH, map_location=self.device)['model'])
-        self.model.to(DEVICE).eval()
+        self.model.to(self.device).eval()
 
         if self.half:
             self.model.half()
@@ -70,7 +71,7 @@ class ObjectDetection:
 
         print("recieving image with shape {}".format(img.shape))
 
-        img = torch.from_numpy(img).to(DEVICE)
+        img = torch.from_numpy(img).to(self.device)
         # uint8 to fp16/32
         img = img.half() if self.half else img.float()
         # 0 - 255 to 0.0 - 1.0
@@ -141,7 +142,7 @@ class ObjectDetection:
 
         print("recieving image with shape {}".format(img.shape))
 
-        img = torch.from_numpy(img).to(DEVICE)
+        img = torch.from_numpy(img).to(self.device)
         # uint8 to fp16/32
         img = img.half() if self.half else img.float()
         # 0 - 255 to 0.0 - 1.0
@@ -204,25 +205,44 @@ class ObjectDetection:
 
 
 def main():
-    # create model
+
+    HOST = socket.gethostname()
+    PORT = 10001
+
     OD = ObjectDetection()
 
-    # load our input image and grab its spatial dimensions
-    img = cv2.imread("./test1.jpg")
+    server = CustomSocket(HOST,PORT)
+    server.startServer()
 
-    # choose one method
-    with torch.no_grad():
-        # get detected image
-        res = OD.detect(img)
+    while True :
+        conn, addr = server.sock.accept()
+        print("Client connected from",addr)
+        data = server.recvMsg(conn)
+        img = np.frombuffer(data,dtype=np.uint8).reshape(720,1080,3)
 
-        # get bboxs of object in images
-        bboxs = OD.get_bbox(img)
-        print(bboxs)
+        with torch.no_grad() :
+            res = OD.detect(img)
+            bboxs = OD.get_bbox(img)
 
-    # show output
-    image = cv2.cvtColor(res, cv2.COLOR_BGR2RGB)
-    cv2.imshow('yolor', image)
-    cv2.waitKey(0)
+        counter = 0
+        
+        mybboxs = []
+
+        for x,y,w,h,name in bboxs :
+            temp = {}
+            temp["x"] = int(x)
+            temp["y"] = int(y)
+            temp["w"] = int(w)
+            temp["h"] = int(h)
+            temp["class"] = name
+            mybboxs.append(temp)
+
+        result = {"bboxs" : mybboxs}
+
+        # print(result)
+
+        server.sendMsg(conn,json.dumps(result))
+
 
 
 if __name__ == '__main__':
